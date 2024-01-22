@@ -1,0 +1,70 @@
+name: Dataset processing
+on: [ push ]
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    steps:
+      - name: cache source data
+        id: cache-source-data
+        uses: actions/cache@v3
+        with:
+          path: assets/source-data
+          key: source-dataset
+      - name: download dataset
+        if: steps.cache-source-data.outputs.cache-hit != 'true'
+        env:
+          KAGGLE_KEY: ${{secrets.KAGGLE_TOKEN}}
+        run: |
+          pip install kaggle
+          mkdir $HOME/.kaggle
+          echo $KAGGLE_KEY > $HOME/.kaggle/kaggle.json
+          kaggle datasets download -d advaypatil/youtube-statistics
+
+          mkdir -p assets/source-data/
+          sudo apt-get install unzip
+          unzip youtube-statistics.zip -d assets/source-data/
+  load:
+    runs-on: ubuntu-latest
+    needs: pull
+    steps:
+      - name: cache source data
+        id: cache-source-data
+        uses: actions/cache@v3
+        with:
+          path: assets/source-data
+          key: source-dataset
+      - name: checkout repo
+        uses: actions/checkout@v3
+      - name: fill database
+        env:
+          DB_USERNAME: ${{secrets.DB_USER}}
+          DB_PASSWORD: ${{secrets.DB_PASS}}
+        run: |
+          pip install -r requirements.txt
+          python src/dataset_loading.py "assets/source-data/comments.csv"
+  preprocess:
+    runs-on: ubuntu-latest
+    needs: load
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v3
+      - name: preprocess dataset
+        env:
+          DB_USERNAME: ${{secrets.DB_USER}}
+          DB_PASSWORD: ${{secrets.DB_PASS}}
+        run: |
+          pip install -r requirements.txt
+          python src/dataset_preprocessing.py 10
+  split:
+    runs-on: ubuntu-latest
+    needs: preprocess
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v3
+      - name: preprocess dataset
+        env:
+          DB_USERNAME: ${{secrets.DB_USER}}
+          DB_PASSWORD: ${{secrets.DB_PASS}}
+        run: |
+          pip install -r requirements.txt
+          python src/dataset_split.py

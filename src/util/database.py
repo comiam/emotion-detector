@@ -201,5 +201,5 @@ def save_model(connection, model, dataset_id):
         cursor.execute('''
             INSERT INTO trained_models (model_name, weights, dataset_id)
             VALUES (%s, %s, %s)
-        ''', (type(model).__name__, weights, dataset_id))
+        ''', (str(model), weights, dataset_id))
     connection.commit()

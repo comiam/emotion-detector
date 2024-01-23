@@ -16,7 +16,7 @@ def train_models():
     logging.warning(f'Loading training data...')
     df = load_train_dataset(connection)
 
-    logging.warning(f'Fetched {len(df)} training data.')
+    logging.warning(f'Fetched {len(df)} training data rows.')
 
     max_dataset_id = df['dataset_id'].max()
     X = np.array(df['embedding'].apply(ast.literal_eval).tolist())

@@ -1,6 +1,6 @@
 import logging
 
-from src.models.models import get_available_models
+from models.models import get_available_models
 from util.database import connect_to_database, load_train_dataset, save_model
 
 

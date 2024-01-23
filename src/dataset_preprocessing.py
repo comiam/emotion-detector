@@ -1,32 +1,36 @@
 import logging
-import torch
 import time
 import numpy as np
 import sys
 
-from transformers import AutoTokenizer, AutoModel
+from gensim.models import Word2Vec
+from nltk.tokenize import word_tokenize
+from sklearn.preprocessing import normalize
 
 from util.database import connect_to_database, fetch_diff_between_datasets, save_preprocessed_data
 
-tokenizer = AutoTokenizer.from_pretrained("cointegrated/rubert-tiny2")
-model = AutoModel.from_pretrained("cointegrated/rubert-tiny2")
-MAX_SEQUENCE_LENGTH = 2048
-model.max_seq_length = MAX_SEQUENCE_LENGTH
+model = Word2Vec.load("w2v_model.bin")
+
+
+def calculate_embedding(text, model):
+    # Токенизация текста
+    tokens = word_tokenize(text)
+
+    # Вычисление векторов слов и среднего вектора
+    word_vectors = [model.wv[word] for word in tokens if word in model.wv]
+
+    if word_vectors:
+        average_embedding = normalize([np.mean(word_vectors, axis=0)])
+        return average_embedding
+    else:
+        return None
 
 
 def get_embeddings(batch):
     """
     Получаем эмбэддинги текстовых данных.
     """
-    tokens = tokenizer(batch, max_length=MAX_SEQUENCE_LENGTH,
-                       padding="max_length",
-                       truncation=True)["input_ids"]
-    tokens = torch.from_numpy(np.array(tokens))
-    with torch.no_grad():
-        embeddings = model(tokens)
-        embeddings = embeddings.last_hidden_state[:, 0, :]
-        embeddings = torch.nn.functional.normalize(embeddings)
-    return embeddings
+    return [calculate_embedding(el, model) for el in batch]
 
 
 def preprocess_batch(batch):
@@ -66,7 +70,7 @@ def preprocess_dataset(timeout_min):
             save_preprocessed_data(connection, embedding_batch, sentiment_batch, batch['version'])
 
             time_passed = time.time() - start_time
-            logging.warning(f'Processed rows: {batch_size} of {dataset_df.shape[0]}. Time spent: {time_passed}')
+            logging.warning(f'Processed rows: {i + batch_size} of {dataset_df.shape[0]}. Time spent: {time_passed}')
             if time_passed > int(timeout_min) * 60:
                 logging.warning('Finish by timeout')
                 break

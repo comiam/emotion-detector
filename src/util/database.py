@@ -115,6 +115,8 @@ def save_preprocessed_data(connection, preprocessed_data, sentiment, version):
 
     with connection.cursor() as cursor:
         for i in range(len(preprocessed_data)):
+            if preprocessed_data[i] is None:
+                continue
             embedding_bytea = json.dumps(preprocessed_data[i].tolist())
             cursor.execute(insert_query, (embedding_bytea, int(sentiment.iloc[i]), int(version.iloc[i]), load_time))
 

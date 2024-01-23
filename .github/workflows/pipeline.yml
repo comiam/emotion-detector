@@ -73,7 +73,7 @@ jobs:
           DB_PASSWORD: ${{secrets.DB_PASS}}
         run: |
           pip install -r requirements.txt
-          python src/dataset_preprocessing.py 1000000
+          python src/dataset_preprocessing.py 100
   split:
     runs-on: ubuntu-latest
     needs: preprocess

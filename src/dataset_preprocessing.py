@@ -18,8 +18,6 @@ model = Word2Vec.load("src/w2v_model.bin")
 def calculate_embedding(text, model):
     # Токенизация текста
     tokens = word_tokenize(text)
-
-    # Вычисление векторов слов и среднего вектора
     word_vectors = [model.wv[word] for word in tokens if word in model.wv]
 
     if word_vectors:

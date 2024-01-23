@@ -30,12 +30,14 @@ jobs:
       - name: checkout repo
         uses: actions/checkout@v3
       - name: cache source data
+        if: steps.cache-source-data.outputs.cache-hit != 'true'
         id: cache-source-data
         uses: actions/cache@v3
         with:
           path: assets/source-data
           key: source-dataset
       - name: Cache pip packages
+        if: steps.cache-source-data.outputs.cache-hit != 'true'
         uses: actions/cache@v3
         with:
           path: |
@@ -44,6 +46,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - name: fill database
+        if: steps.cache-source-data.outputs.cache-hit != 'true'
         env:
           DB_USERNAME: ${{secrets.DB_USER}}
           DB_PASSWORD: ${{secrets.DB_PASS}}

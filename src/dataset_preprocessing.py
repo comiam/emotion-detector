@@ -1,5 +1,7 @@
 import logging
 import time
+
+import nltk
 import numpy as np
 import sys
 
@@ -9,6 +11,7 @@ from sklearn.preprocessing import normalize
 
 from util.database import connect_to_database, fetch_diff_between_datasets, save_preprocessed_data
 
+nltk.download('punkt')
 model = Word2Vec.load("src/w2v_model.bin")
 
 

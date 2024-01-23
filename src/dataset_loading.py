@@ -7,6 +7,7 @@ def process_new_data(filename):
     df = pd.read_csv(filename)
     connection = connect_to_database()
     save_new_data(df, connection)
+    connection.close()
 
 
 if __name__ == "__main__":

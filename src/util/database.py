@@ -1,5 +1,7 @@
 import json
+import logging
 import os
+import pickle
 from datetime import datetime
 
 import pandas as pd
@@ -9,8 +11,9 @@ from psycopg2 import extras
 
 def connect_to_database():
     """
-        Создаёт соединение с БД.
+    Создаёт соединение с БД.
     """
+    logging.info('Connecting to database...')
     user = os.getenv("DB_USERNAME")
     pwd = os.getenv("DB_PASSWORD")
     conn = psycopg2.connect(
@@ -20,7 +23,7 @@ def connect_to_database():
 
 def init_db_schema(connection):
     """
-        Создаёт необходимые таблицы.
+    Создаёт необходимые таблицы.
     """
     with connection.cursor() as cursor:
         cursor.execute('''
@@ -48,8 +51,16 @@ def init_db_schema(connection):
                 split_type INTEGER
             );
         ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS trained_models (
+                id SERIAL PRIMARY KEY,
+                model_name TEXT,
+                weights BYTEA,
+                training_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                dataset_id INTEGER
+            );
+        ''')
     connection.commit()
-    connection.close()
 
 
 def get_latest_dataset_version(connection):
@@ -78,8 +89,9 @@ def fetch_diff_between_datasets(connection):
 
 def save_new_data(df, connection):
     """
-        Загружает данные из CSV-файла в базу данных с версионированием и временем загрузки.
+    Загружает данные из CSV-файла в базу данных с версионированием и временем загрузки.
     """
+    logging.warning('Saving new dataset data to DB...')
     df = df[['Comment', 'Sentiment']]
     df.rename(columns={'Comment': 'comment'}, inplace=True)
     df.rename(columns={'Sentiment': 'sentiment'}, inplace=True)
@@ -101,7 +113,7 @@ def save_new_data(df, connection):
         extras.execute_values(cursor, insert_data_query, values)
 
     connection.commit()
-    connection.close()
+
 
 def save_preprocessed_data(connection, preprocessed_data, sentiment, version):
     """
@@ -147,4 +159,32 @@ def save_splitted_dataset(connection, values_train, values_test):
     with connection.cursor() as cursor:
         cursor.executemany(insert_query, values_train)
         cursor.executemany(insert_query, values_test)
+    connection.commit()
+
+
+def load_train_dataset(connection):
+    """
+    Получаем тренировочные данные из train_test_splits.
+    """
+    query = '''
+            SELECT embedding, sentiment, preprocessed_dataset.id AS dataset_id
+            FROM preprocessed_dataset
+            JOIN train_test_splits ON preprocessed_dataset.id = train_test_splits.dataset_id
+            WHERE split_type = 0;
+        '''
+    return pd.read_sql_query(query, connection)
+
+
+def save_model(connection, model, dataset_id):
+    """
+    Сохраняем обученную модель в trained_models.
+    """
+    # Сохранение весов модели в бинарном формате
+    weights = psycopg2.Binary(pickle.dumps(model))
+
+    with connection.cursor() as cursor:
+        cursor.execute('''
+            INSERT INTO trained_models (model_name, weights, dataset_id)
+            VALUES (%s, %s, %s)
+        ''', (type(model).__name__, weights, dataset_id))
     connection.commit()

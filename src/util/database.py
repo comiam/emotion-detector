@@ -4,9 +4,24 @@ import os
 import pickle
 from datetime import datetime
 
+import numpy
 import pandas as pd
 import psycopg2
 from psycopg2 import extras
+
+from psycopg2.extensions import register_adapter, AsIs
+
+
+def adapt_numpy_float64(numpy_float64):
+    return AsIs(numpy_float64)
+
+
+def adapt_numpy_int64(numpy_int64):
+    return AsIs(numpy_int64)
+
+
+register_adapter(numpy.float64, adapt_numpy_float64)
+register_adapter(numpy.int64, adapt_numpy_int64)
 
 
 def connect_to_database():

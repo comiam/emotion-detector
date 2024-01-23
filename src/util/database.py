@@ -26,7 +26,7 @@ def init_db_schema(connection):
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS dataset (
                 id SERIAL PRIMARY KEY,
-                comment VARCHAR UNIQUE,
+                comment VARCHAR,
                 sentiment INTEGER,
                 version INTEGER,
                 load_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -35,7 +35,7 @@ def init_db_schema(connection):
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS preprocessed_dataset (
                 id SERIAL PRIMARY KEY,
-                embedding VARCHAR,
+                embedding TEXT,
                 sentiment INTEGER,
                 version INTEGER,
                 load_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP

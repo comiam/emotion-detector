@@ -10,6 +10,10 @@ def create_splits():
     connection = connect_to_database()
     df_to_split = get_unsplitted_dataset(connection)
 
+    if df_to_split.empty:
+        connection.close()
+        return
+
     # Разделяем данные на train и test в соотношении 80/20
     train_ids, test_ids = train_test_split(df_to_split['id'], test_size=0.2, random_state=42)
 

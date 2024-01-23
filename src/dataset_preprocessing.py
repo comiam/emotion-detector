@@ -47,6 +47,10 @@ def preprocess_dataset(timeout_min):
     connection = connect_to_database()
     dataset_df = fetch_diff_between_datasets(connection)
 
+    if dataset_df.empty:
+        connection.close()
+        return
+
     try:
         # Проход по батчам и предобработка
         batch_size = 32

@@ -1,0 +1,15 @@
+name: Database Init
+on: [workflow_dispatch]
+jobs:
+  InitDb:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repo content
+        uses: actions/checkout@v3
+      - name: create database
+        env:
+          DB_USERNAME: ${{secrets.DBUSER}}
+          DB_PASSWORD: ${{secrets.DBPASSWORD}}
+        run: |
+          pip install -r src/requirements.txt
+          python src/database_init.py

@@ -53,6 +53,9 @@ def preprocess_dataset(timeout_min):
         start_time = time.time()
         for i in range(0, len(dataset_df), batch_size):
             batch = dataset_df.iloc[i:i + batch_size]
+            if batch.empty:
+                break
+
             sentiment_batch, embedding_batch = preprocess_batch(batch)
 
             # Сохраняем предобработанные данные

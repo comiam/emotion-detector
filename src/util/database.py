@@ -93,8 +93,7 @@ def save_new_data(df, connection):
 
     # Записываем данные в базу данных
     insert_data_query = f'''
-        INSERT INTO dataset ({', '.join(df.columns)}) VALUES %s 
-        ON CONFLICT (comment) DO NOTHING;
+        INSERT INTO dataset ({', '.join(df.columns)}) VALUES %s;
     '''
 
     with connection.cursor() as cursor:

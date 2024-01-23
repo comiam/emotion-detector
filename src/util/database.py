@@ -1,3 +1,4 @@
+import json
 import os
 from datetime import datetime
 
@@ -25,7 +26,7 @@ def init_db_schema(connection):
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS dataset (
                 id SERIAL PRIMARY KEY,
-                comment VARCHAR,
+                comment VARCHAR UNIQUE,
                 sentiment INTEGER,
                 version INTEGER,
                 load_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -34,7 +35,7 @@ def init_db_schema(connection):
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS preprocessed_dataset (
                 id SERIAL PRIMARY KEY,
-                embedding BYTEA,
+                embedding VARCHAR,
                 sentiment INTEGER,
                 version INTEGER,
                 load_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -92,7 +93,8 @@ def save_new_data(df, connection):
 
     # Записываем данные в базу данных
     insert_data_query = f'''
-        INSERT INTO dataset ({', '.join(df.columns)}) VALUES %s;
+        INSERT INTO dataset ({', '.join(df.columns)}) VALUES %s 
+        ON CONFLICT (comment) DO NOTHING;
     '''
 
     with connection.cursor() as cursor:
@@ -114,7 +116,7 @@ def save_preprocessed_data(connection, preprocessed_data, sentiment, version):
 
     with connection.cursor() as cursor:
         for i in range(len(preprocessed_data)):
-            embedding_bytea = psycopg2.Binary(preprocessed_data[i].numpy().astype(int).tobytes())
+            embedding_bytea = json.dumps(preprocessed_data[i].tolist())
             cursor.execute(insert_query, (embedding_bytea, int(sentiment[i]), int(version[i]), load_time))
 
     connection.commit()

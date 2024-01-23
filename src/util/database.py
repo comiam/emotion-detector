@@ -89,10 +89,8 @@ def save_new_data(df, connection):
     df['load_time'] = datetime.now()
 
     # Записываем данные в базу данных
-    with connection.cursor() as cursor:
-        cursor.copy_from(df.itertuples(index=False), 'dataset',
-                         columns=('comment', 'sentiment', 'version', 'load_time'))
-    cursor.close()
+    df.to_sql(name='dataset', con=connection, index=False, if_exists='replace')
+
     connection.commit()
 
 

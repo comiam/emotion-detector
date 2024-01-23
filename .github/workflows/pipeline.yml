@@ -27,14 +27,22 @@ jobs:
     runs-on: ubuntu-latest
     needs: pull
     steps:
+      - name: checkout repo
+        uses: actions/checkout@v3
       - name: cache source data
         id: cache-source-data
         uses: actions/cache@v3
         with:
           path: assets/source-data
           key: source-dataset
-      - name: checkout repo
-        uses: actions/checkout@v3
+      - name: Cache pip packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - name: fill database
         env:
           DB_USERNAME: ${{secrets.DB_USER}}
@@ -48,6 +56,14 @@ jobs:
     steps:
       - name: checkout repo
         uses: actions/checkout@v3
+      - name: Cache pip packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - name: preprocess dataset
         env:
           DB_USERNAME: ${{secrets.DB_USER}}
@@ -61,6 +77,14 @@ jobs:
     steps:
       - name: checkout repo
         uses: actions/checkout@v3
+      - name: Cache pip packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - name: preprocess dataset
         env:
           DB_USERNAME: ${{secrets.DB_USER}}

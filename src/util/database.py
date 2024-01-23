@@ -12,7 +12,7 @@ def connect_to_database():
     user = os.getenv("DB_USERNAME")
     pwd = os.getenv("DB_PASSWORD")
     conn = psycopg2.connect(
-        f"postgres://{user}:{pwd}dpg-cmndg16g1b2c7397qpr0-a.frankfurt-postgres.render.com/emotional")
+        f"postgres://{user}:{pwd}@dpg-cmndg16g1b2c7397qpr0-a.frankfurt-postgres.render.com/emotional")
     return conn
 
 

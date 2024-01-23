@@ -89,7 +89,13 @@ def save_new_data(df, connection):
     df['load_time'] = datetime.now()
 
     # Записываем данные в базу данных
-    df.to_sql(name='dataset', con=connection, index=False, if_exists='replace')
+    insert_data_query = f'''
+        INSERT INTO dataset (comment, sentiment, load_time, version) VALUES (%s, %s, %s, %s);
+    '''
+
+    with connection.cursor() as cursor:
+        for index, row in df.iterrows():
+            cursor.execute(insert_data_query, (row['comment'], row['sentiment'], row['load_time'], row['version']))
 
     connection.commit()
 

@@ -6,7 +6,7 @@ import sys
 
 from transformers import AutoTokenizer, AutoModel
 
-from src.util.database import connect_to_database, fetch_diff_between_datasets, save_preprocessed_data
+from util.database import connect_to_database, fetch_diff_between_datasets, save_preprocessed_data
 
 tokenizer = AutoTokenizer.from_pretrained("cointegrated/rubert-tiny2")
 model = AutoModel.from_pretrained("cointegrated/rubert-tiny2")

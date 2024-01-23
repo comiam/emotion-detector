@@ -1,6 +1,6 @@
 from sklearn.model_selection import train_test_split
 
-from src.util.database import get_unsplitted_dataset, connect_to_database, save_splitted_dataset
+from util.database import get_unsplitted_dataset, connect_to_database, save_splitted_dataset
 
 
 def create_splits():

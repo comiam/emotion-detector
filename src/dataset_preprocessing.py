@@ -66,7 +66,7 @@ def preprocess_dataset(timeout_min):
             save_preprocessed_data(connection, embedding_batch, sentiment_batch, batch['version'])
 
             time_passed = time.time() - start_time
-            logging.info(f'Processed rows: {batch_size} of {dataset_df.shape[0]}. Time spent: {time_passed}')
+            logging.warning(f'Processed rows: {batch_size} of {dataset_df.shape[0]}. Time spent: {time_passed}')
             if time_passed > int(timeout_min) * 60:
                 logging.warning('Finish by timeout')
                 break

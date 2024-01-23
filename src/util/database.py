@@ -48,6 +48,7 @@ def init_db_schema(connection):
             );
         ''')
     connection.commit()
+    connection.close()
 
 
 def get_latest_dataset_version(connection):
@@ -113,8 +114,8 @@ def save_preprocessed_data(connection, preprocessed_data, sentiment, version):
 
     with connection.cursor() as cursor:
         for i in range(len(preprocessed_data)):
-            embedding_bytea = psycopg2.Binary(preprocessed_data[i].numpy().tobytes())
-            cursor.execute(insert_query, (embedding_bytea, sentiment[i], version[i], load_time))
+            embedding_bytea = psycopg2.Binary(preprocessed_data[i].numpy().astype(int).tobytes())
+            cursor.execute(insert_query, (embedding_bytea, int(sentiment[i]), int(version[i]), load_time))
 
     connection.commit()
 

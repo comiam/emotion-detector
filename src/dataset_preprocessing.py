@@ -9,7 +9,7 @@ from sklearn.preprocessing import normalize
 
 from util.database import connect_to_database, fetch_diff_between_datasets, save_preprocessed_data
 
-model = Word2Vec.load("w2v_model.bin")
+model = Word2Vec.load("src/w2v_model.bin")
 
 
 def calculate_embedding(text, model):

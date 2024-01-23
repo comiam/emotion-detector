@@ -21,8 +21,8 @@ jobs:
             ${{ runner.os }}-pip-
       - name: create database
         env:
-          DB_USERNAME: ${{secrets.DBUSER}}
-          DB_PASSWORD: ${{secrets.DBPASSWORD}}
+          DB_USERNAME: ${{secrets.DB_USER}}
+          DB_PASSWORD: ${{secrets.DB_PASS}}
         run: |
           pip install -r requirements.txt
           python src/database_init.py

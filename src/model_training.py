@@ -1,7 +1,10 @@
 import logging
 
+import numpy as np
+
 from models.models import get_available_models
 from util.database import connect_to_database, load_train_dataset, save_model
+import ast
 
 
 def train_models():
@@ -13,9 +16,11 @@ def train_models():
     logging.warning(f'Loading training data...')
     df = load_train_dataset(connection)
 
+    logging.warning(f'Fetched {len(df)} training data.')
+
     max_dataset_id = df['dataset_id'].max()
-    X = df['embedding'].apply(lambda row: eval(row))
-    y = df['sentiment']
+    X = np.array(df['embedding'].apply(ast.literal_eval).tolist())
+    y = df['sentiment'].to_numpy()
 
     logging.warning(f'Begin training model...')
     for model in get_available_models():

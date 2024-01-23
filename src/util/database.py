@@ -3,6 +3,7 @@ from datetime import datetime
 
 import pandas as pd
 import psycopg2
+from psycopg2 import extras
 
 
 def connect_to_database():
@@ -90,15 +91,15 @@ def save_new_data(df, connection):
 
     # Записываем данные в базу данных
     insert_data_query = f'''
-        INSERT INTO dataset (comment, sentiment, load_time, version) VALUES (%s, %s, %s, %s);
+        INSERT INTO dataset ({', '.join(df.columns)}) VALUES %s;
     '''
 
     with connection.cursor() as cursor:
-        for index, row in df.iterrows():
-            cursor.execute(insert_data_query, (row['comment'], row['sentiment'], row['load_time'], row['version']))
+        values = [tuple(row) for row in df.itertuples(index=False, name=None)]
+        extras.execute_values(cursor, insert_data_query, values)
 
     connection.commit()
-
+    connection.close()
 
 def save_preprocessed_data(connection, preprocessed_data, sentiment, version):
     """

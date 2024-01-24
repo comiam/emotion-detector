@@ -55,6 +55,7 @@ def preprocess_dataset(timeout_min):
     logging.warning(f"Fetched {len(dataset_df)} rows.")
 
     if dataset_df.empty:
+        logging.warning(f"No such data for preprocessing.")
         connection.close()
         return
 

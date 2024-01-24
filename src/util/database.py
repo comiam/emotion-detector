@@ -203,3 +203,14 @@ def save_model(connection, model, dataset_id):
             VALUES (%s, %s, %s)
         ''', (str(model), weights, dataset_id))
     connection.commit()
+
+
+def get_trained_models_dataset_versions(connection):
+    """
+    Получаем все последние марки trained датасета, до которых обучались модели в БД.
+    """
+    query = 'SELECT DISTINCT(dataset_id) FROM trained_models'
+
+    with connection.cursor() as cursor:
+        cursor.execute(query)
+        return [row[0] for row in cursor.fetchall()]

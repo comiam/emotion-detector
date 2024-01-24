@@ -15,6 +15,7 @@ def create_splits():
     logging.warning(f"Fetched {len(df_to_split)} rows to split.")
 
     if df_to_split.empty:
+        logging.warning(f"No such data for splitting.")
         connection.close()
         return
 

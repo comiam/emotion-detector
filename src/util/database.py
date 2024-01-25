@@ -205,7 +205,7 @@ def save_model(connection, model, dataset_id):
     connection.commit()
 
 
-def get_trained_models_dataset_versions(connection):
+def get_trained_models_last_dataset_versions(connection):
     """
     Получаем все последние марки trained датасета, до которых обучались модели в БД.
     """

@@ -6,7 +6,7 @@ on:
         description: 'Name of the job to run manually'
         required: true
 jobs:
-  InitDb:
+  init-db-scheme:
     runs-on: ubuntu-latest
     steps:
       - name: checkout repo content
@@ -16,13 +16,13 @@ jobs:
         with:
           path: |
             ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          key: ${{ runner.os }}-pip-db-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
-      - name: create database
+            ${{ runner.os }}-pip-db
+      - name: init database scheme
         env:
           DB_USERNAME: ${{secrets.DB_USER}}
           DB_PASSWORD: ${{secrets.DB_PASS}}
         run: |
-          pip install -r requirements.txt
+          pip install -r db-requirements.txt
           python src/database_init.py

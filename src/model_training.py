@@ -2,8 +2,8 @@ import logging
 
 import numpy as np
 
-from models.models import get_available_models
-from util.database import connect_to_database, load_train_dataset, save_model, get_trained_models_dataset_versions
+from models.models import get_new_models
+from util.database import connect_to_database, load_train_dataset, save_model, get_trained_models_last_dataset_versions
 import ast
 
 
@@ -19,7 +19,7 @@ def train_models():
     logging.warning(f'Fetched {len(df)} training data rows.')
 
     max_dataset_id = df['dataset_id'].max()
-    trained_dataset_ids = get_trained_models_dataset_versions(connection)
+    trained_dataset_ids = get_trained_models_last_dataset_versions(connection)
 
     if max_dataset_id in trained_dataset_ids:
         logging.warning(f'No new data for training, last dataset mark is {max_dataset_id}.')
@@ -30,7 +30,7 @@ def train_models():
     y = df['sentiment'].to_numpy()
 
     logging.warning(f'Begin training model...')
-    for model in get_available_models():
+    for model in get_new_models():
         logging.warning(f'Training model: {model}...')
         model.fit(X, y)
 

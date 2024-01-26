@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: pull
     steps:
-      - name: checkout repo
+      - name: checkout repository
         uses: actions/checkout@v3
       - name: cache source data
         if: steps.cache-source-data.outputs.cache-hit != 'true'
@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: load
     steps:
-      - name: checkout repo
+      - name: checkout repository
         uses: actions/checkout@v3
       - name: Cache pip packages
         uses: actions/cache@v3
@@ -78,7 +78,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: preprocess
     steps:
-      - name: checkout repo
+      - name: checkout repository
         uses: actions/checkout@v3
       - name: Cache pip packages
         uses: actions/cache@v3
@@ -99,7 +99,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: split
     steps:
-      - name: checkout repo
+      - name: checkout repository
         uses: actions/checkout@v3
       - name: Cache pip packages
         uses: actions/cache@v3
@@ -116,3 +116,76 @@ jobs:
         run: |
           pip install -r requirements.txt
           python src/model_training.py
+  select_best_model:
+    runs-on: ubuntu-latest
+    needs: train
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+      - name: Cache pip packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: select best models
+        env:
+          DB_USERNAME: ${{secrets.DB_USER}}
+          DB_PASSWORD: ${{secrets.DB_PASS}}
+        run: |
+          pip install -r requirements.txt
+          python src/model_selection.py
+  select_deploy_model:
+    runs-on: ubuntu-latest
+    needs: select_best_model
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+      - name: Cache pip packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: select model for deploy
+        env:
+          DB_USERNAME: ${{secrets.DB_USER}}
+          DB_PASSWORD: ${{secrets.DB_PASS}}
+        run: |
+          pip install -r requirements.txt
+          python src/model_deployment.py
+      - name: upload deploy model
+        uses: actions/upload-artifact@v2
+        with:
+          name: deploy-model
+          path: deployed/deploy_model.pkl
+  build_image:
+    runs-on: ubuntu-latest
+    needs: select_deploy_model
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+      - name: Download artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: deploy-model
+          path: ./deployed
+      - name: set up docker buildx
+        uses: docker/setup-buildx-action@v1
+      - name: login to docker hub
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+      - name: build and push docker image
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        run: |
+          docker buildx create --use
+          docker buildx build -t comiam/nlp_web_app -f Dockerfile --push .
+      - name: Logout from Docker Hub
+        run: docker logout

@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import pickle
 from datetime import datetime
 
 import numpy
@@ -10,6 +9,8 @@ import psycopg2
 from psycopg2 import extras
 
 from psycopg2.extensions import register_adapter, AsIs
+
+from models.models import serialize_model, deserialize_model
 
 
 def adapt_numpy_float64(numpy_float64):
@@ -73,6 +74,24 @@ def init_db_schema(connection):
                 weights BYTEA,
                 training_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 dataset_id INTEGER
+            );
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS best_validated_models (
+                id SERIAL PRIMARY KEY,
+                precision NUMERIC,
+                recall NUMERIC,
+                accuracy NUMERIC,
+                f1_score NUMERIC,
+                validation_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                model_id INTEGER
+            );
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS deploy_models (
+                id SERIAL PRIMARY KEY,
+                model_id INTEGER,
+                deploy_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         ''')
     connection.commit()
@@ -177,15 +196,15 @@ def save_splitted_dataset(connection, values_train, values_test):
     connection.commit()
 
 
-def load_train_dataset(connection):
+def load_dataset_data(connection, split_type):
     """
     Получаем тренировочные данные из train_test_splits.
     """
-    query = '''
+    query = f'''
             SELECT embedding, sentiment, preprocessed_dataset.id AS dataset_id
             FROM preprocessed_dataset
             JOIN train_test_splits ON preprocessed_dataset.id = train_test_splits.dataset_id
-            WHERE split_type = 0;
+            WHERE split_type = {split_type};
         '''
     return pd.read_sql_query(query, connection)
 
@@ -195,13 +214,14 @@ def save_model(connection, model, dataset_id):
     Сохраняем обученную модель в trained_models.
     """
     # Сохранение весов модели в бинарном формате
-    weights = psycopg2.Binary(pickle.dumps(model))
+    weights = psycopg2.Binary(serialize_model(model))
 
     with connection.cursor() as cursor:
-        cursor.execute('''
+        query = '''
             INSERT INTO trained_models (model_name, weights, dataset_id)
             VALUES (%s, %s, %s)
-        ''', (str(model), weights, dataset_id))
+        '''
+        cursor.execute(query, (str(model), weights, dataset_id))
     connection.commit()
 
 
@@ -214,3 +234,140 @@ def get_trained_models_last_dataset_versions(connection):
     with connection.cursor() as cursor:
         cursor.execute(query)
         return [row[0] for row in cursor.fetchall()]
+
+
+def load_trained_models(connection):
+    """
+    Загрузка моделей из БД.
+    """
+    models = []
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT id, weights FROM trained_models')
+        for id, weights in cursor.fetchall():
+            model = deserialize_model(weights)
+            models.append((id, model))
+
+    return models
+
+
+def save_best_model(connection, best_model_id, best_metrics):
+    """
+    Сохранение лучшей модели в БД.
+    """
+    with connection.cursor() as cursor:
+        # Дабы избежать дубликатов
+        cursor.execute('DELETE FROM best_validated_models WHERE model_id = %s', (best_model_id,))
+        query = '''
+                    INSERT INTO best_validated_models ("precision", recall, accuracy, f1_score, model_id)
+                    VALUES (%s, %s, %s, %s, %s)
+        '''
+        cursor.execute(query, (best_metrics['precision'], best_metrics['recall'],
+                               best_metrics['accuracy'], best_metrics['f1_score'], best_model_id))
+
+
+def load_best_models(connection):
+    """
+    Загрузить лучшие модели из БД.
+    """
+    best_model_info = []
+
+    with connection.cursor() as cursor:
+        query = '''
+            SELECT b.model_id, t.model_name, b.f1_score, t.weights
+            FROM best_validated_models b
+            JOIN trained_models t ON b.model_id = t.id
+        '''
+        cursor.execute(query)
+        for model_id, model_name, f1_score, weights in cursor.fetchall():
+            best_model_info.append((model_id, model_name, f1_score, weights))
+
+    return best_model_info
+
+
+def count_best_models(connection):
+    """
+    Возвращает количество сохранённых лучших моделей БД.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT COUNT(*) FROM best_validated_models')
+        count = cursor.fetchone()[0]
+    return count
+
+
+def load_best_model(connection):
+    """
+    Извлечение лучшей модели из таблицы best_validated_models.
+    """
+    with connection.cursor() as cursor:
+        query = '''
+                SELECT model_id, model_name
+                FROM best_validated_models
+                INNER JOIN trained_models ON best_validated_models.model_id = trained_models.id
+                ORDER BY f1_score DESC
+                LIMIT 1;
+        '''
+        cursor.execute(query)
+        best_model = cursor.fetchone()
+
+    return best_model
+
+
+def truncate_models(connection):
+    """
+    Сохранить 2 лучшие модели в БД, остальные удалить.
+    """
+    with connection.cursor() as cursor:
+        # Топ 2 модели по метрике f1
+        cursor.execute('''
+            SELECT tm.id
+            FROM trained_models tm
+            INNER JOIN best_validated_models bvm ON tm.id = bvm.model_id
+            ORDER BY bvm.f1_score DESC
+        ''')
+        top2_models = []
+        for idx in cursor.fetchmany(2):
+            top2_models.append(int(idx[0]))
+
+        top2_models = tuple(top2_models)
+
+        # Удаляем остальные модели из trained_models и best_validated_models
+        cursor.execute('''
+            DELETE FROM best_validated_models WHERE model_id NOT IN %s
+        ''', (top2_models,))
+        cursor.execute('''
+            DELETE FROM trained_models WHERE id NOT IN %s
+        ''', (top2_models,))
+
+    logging.warning("Top 2 models saved and others deleted successfully.")
+
+
+def get_deployed_model(connection):
+    """
+    Получение записей моделей из deploy_models.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT model_id FROM deploy_models')
+        existing_deploy_model_id = cursor.fetchone()
+
+    return existing_deploy_model_id
+
+
+def get_deployed_model_with_weight(connection):
+    """
+    Получение записей моделей из deploy_models, но с весами.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute('''
+            SELECT d.model_id, t.weights
+            FROM deploy_models d
+            JOIN trained_models t ON d.model_id = t.id
+        ''')
+        deployed_model_info = cursor.fetchone()
+
+    return deployed_model_info
+
+
+def add_new_deploy_model(connection, model_id):
+    with connection.cursor() as cursor:
+        cursor.execute('DELETE FROM deploy_models')
+        cursor.execute('INSERT INTO deploy_models (model_id) VALUES (%s);', (model_id,))

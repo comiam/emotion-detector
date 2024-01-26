@@ -1,28 +1,24 @@
 name: Database Init
 on:
   workflow_dispatch:
-    inputs:
-      job_name:
-        description: 'Name of the job to run manually'
-        required: true
 jobs:
   init-db-scheme:
     runs-on: ubuntu-latest
     steps:
-      - name: checkout repo content
+      - name: checkout repository
         uses: actions/checkout@v3
       - name: Cache pip packages
         uses: actions/cache@v3
         with:
           path: |
             ~/.cache/pip
-          key: ${{ runner.os }}-pip-db-${{ hashFiles('**/requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
-            ${{ runner.os }}-pip-db
+            ${{ runner.os }}-pip
       - name: init database scheme
         env:
           DB_USERNAME: ${{secrets.DB_USER}}
           DB_PASSWORD: ${{secrets.DB_PASS}}
         run: |
-          pip install -r db-requirements.txt
+          pip install -r requirements.txt
           python src/database_init.py

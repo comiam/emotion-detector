@@ -1,3 +1,5 @@
+[![Deploy](https://github.com/comiam/emotion-detector/actions/workflows/deploy.yml/badge.svg)](https://github.com/comiam/emotion-detector/actions/workflows/deploy.yml)
+
 # Описание проекта
 ## Название проекта: emotion-detector
 ### Цель: Определить эмоциональную тональность высказываний пользователя.

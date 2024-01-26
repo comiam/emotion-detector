@@ -1,6 +1,6 @@
 import pandas as pd
 import sys
-from util.database import connect_to_database, save_new_data
+from db.database import connect_to_database, save_new_data
 
 
 def process_new_data(filename):

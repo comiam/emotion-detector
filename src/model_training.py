@@ -2,29 +2,43 @@ import logging
 
 import numpy as np
 
-from models.models import get_new_models
-from util.database import connect_to_database, load_train_dataset, save_model, get_trained_models_last_dataset_versions
+from models.models import get_new_models, deserialize_model
+from db.database import connect_to_database, load_dataset_data, save_model, get_trained_models_last_dataset_versions, \
+    load_best_models
 import ast
 
 
+def retrain_and_update_models(connection, X_train_new, y_train_new):
+    logging.warning(f"Begin retraining best models.")
+    best_model_info = load_best_models(connection)
+
+    if len(best_model_info) == 0:
+        logging.warning(f"Nothing to retrain! Go out!")
+        return
+
+    # Дообучение моделей на новых данных
+    for model_info in best_model_info:
+        model_id, model_name, current_f1, weights = model_info
+
+        logging.warning(f"Retraining model: id {model_id}, model_name: {model_name}")
+        model = deserialize_model(weights)
+        model.fit(X_train_new, y_train_new)
+
+        save_model(connection, model, np.max(X_train_new))
+        logging.warning(f"Model: id {model_id}, model_name: {model_name} retrained and saved new copy.")
+
+    connection.commit()
+
+
 def train_models():
-    """
-    Обучает модели на данных из train_test_splits.
-    """
     connection = connect_to_database()
 
     logging.warning(f'Loading training data...')
-    df = load_train_dataset(connection)
+    df = load_dataset_data(connection, 0)
 
     logging.warning(f'Fetched {len(df)} training data rows.')
 
     max_dataset_id = df['dataset_id'].max()
-    trained_dataset_ids = get_trained_models_last_dataset_versions(connection)
-
-    if max_dataset_id in trained_dataset_ids:
-        logging.warning(f'No new data for training, last dataset mark is {max_dataset_id}.')
-        connection.close()
-        return
 
     X = np.array(df['embedding'].apply(ast.literal_eval).tolist())
     y = df['sentiment'].to_numpy()
@@ -37,7 +51,17 @@ def train_models():
         logging.warning(f'Saving model {model} to DB...')
         save_model(connection, model, max_dataset_id)
 
-    logging.warning(f'Training complete.')
+    connection.commit()
+    logging.warning(f'New models training complete.')
+
+    trained_dataset_ids = get_trained_models_last_dataset_versions(connection)
+
+    if max_dataset_id in trained_dataset_ids or max_dataset_id < min(trained_dataset_ids, default=0):
+        logging.warning(f'No new data for retraining, last dataset mark is {max_dataset_id}.')
+        connection.close()
+        return
+
+    retrain_and_update_models(connection, X, y)
     connection.close()
 
 

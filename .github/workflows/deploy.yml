@@ -1,0 +1,22 @@
+name: Deploy
+on:
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v3
+      - name: setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{secrets.SSH_SECRET}}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{secrets.DEPLOY_SERVER_IP}} >> ~/.ssh/known_hosts
+      - name: deploy to server
+        env:
+          DEPLOY_SERVER_IP: ${{secrets.DEPLOY_SERVER_IP}}
+        run: |
+          chmod +x deploy.sh
+          ./deploy.sh

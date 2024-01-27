@@ -50,6 +50,7 @@ def init_db_schema(connection):
                 version INTEGER,
                 load_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+            CREATE INDEX idx_dataset_id ON dataset(id);
         ''')
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS preprocessed_dataset (
@@ -59,6 +60,8 @@ def init_db_schema(connection):
                 version INTEGER,
                 load_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+            CREATE INDEX idx_preprocessed_dataset_id ON preprocessed_dataset(id);
+            CREATE INDEX idx_preprocessed_sentiment ON preprocessed_dataset(sentiment);
         ''')
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS train_test_splits (
@@ -66,6 +69,8 @@ def init_db_schema(connection):
                 dataset_id INTEGER,
                 split_type INTEGER
             );
+            CREATE INDEX idx_train_test_splits_id ON train_test_splits(id);
+            CREATE INDEX idx_train_test_splits_split_type ON train_test_splits(split_type);
         ''')
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS trained_models (
@@ -108,7 +113,7 @@ def get_latest_dataset_version(connection):
     return latest_version
 
 
-def fetch_diff_between_datasets(connection):
+def fetch_diff_between_datasets(connection, batch_size):
     """
     Получает информацию, какие данные в dataset не были обработаны.
     """
@@ -116,9 +121,10 @@ def fetch_diff_between_datasets(connection):
         SELECT d.*
         FROM dataset d
         LEFT JOIN preprocessed_dataset p ON d.version = p.version
-        WHERE p.version IS NULL;
+        WHERE p.version IS NULL
+        ORDER BY d.id ASC;
     '''
-    return pd.read_sql_query(query, connection)
+    return pd.read_sql_query(query, connection, chunksize=batch_size)
 
 
 def save_new_data(df, connection):
@@ -191,8 +197,7 @@ def save_splitted_dataset(connection, values_train, values_test):
             VALUES (%s, %s);
         '''
     with connection.cursor() as cursor:
-        cursor.executemany(insert_query, values_train)
-        cursor.executemany(insert_query, values_test)
+        cursor.executemany(insert_query, values_train + values_test)
     connection.commit()
 
 

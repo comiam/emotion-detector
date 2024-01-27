@@ -19,18 +19,16 @@ def preprocess_batch(batch):
     Обработка батча новых данных.
     """
     text_data = batch['comment'].tolist()
-
-    sentiment_mapping = {0: 0, 1: 0.5, 2: 1}
-    sentiment_batch = batch['sentiment'].map(sentiment_mapping)
-
     emb_batch = get_embeddings(text_data)
 
-    return sentiment_batch, emb_batch
+    return batch['sentiment'], emb_batch
 
 
 def preprocess_dataset(timeout_min):
     connection = connect_to_database()
-    dataset_df = fetch_diff_between_datasets(connection)
+
+    batch_size = 256
+    dataset_df = fetch_diff_between_datasets(connection, batch_size)
 
     logging.warning(f"Fetched {len(dataset_df)} rows.")
 
@@ -41,7 +39,6 @@ def preprocess_dataset(timeout_min):
 
     try:
         # Проход по батчам и предобработка
-        batch_size = 32
         start_time = time.time()
         for i in range(0, len(dataset_df), batch_size):
             batch = dataset_df.iloc[i:i + batch_size]

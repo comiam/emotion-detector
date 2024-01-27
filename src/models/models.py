@@ -3,9 +3,8 @@ import pickle
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
-from sklearn.svm import SVC
 
-allowed_models_to_load = ['SVC', 'LogisticRegression', 'MLPClassifier']
+allowed_models_to_load = ['LogisticRegression', 'MLPClassifier']
 
 
 def serialize_model(model):
@@ -41,13 +40,6 @@ def get_new_models():
             model_params['penalty'] = np.random.choice(['l1', 'l2']) if model_params['solver'] == 'liblinear' else 'l2'
             model_params['max_iter'] = np.random.randint(1000, 10000)
             model = LogisticRegression(**model_params)
-
-        elif model_type == 'SVC':
-            model_params['C'] = 1 + np.random.uniform(-1, 3)
-            model_params['kernel'] = np.random.choice(['linear', 'rbf', 'poly'])
-            model_params['degree'] = np.random.randint(2, 5) if model_params['kernel'] == 'poly' else 3
-            model_params['gamma'] = np.random.choice(['scale', 'auto']) if model_params['kernel'] == 'rbf' else 'scale'
-            model = SVC(**model_params)
 
         models.append(model)
 

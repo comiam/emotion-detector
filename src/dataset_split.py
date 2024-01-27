@@ -21,13 +21,16 @@ def create_splits():
 
     logging.warning(f"Begin splitting...")
     # Разделяем данные на train и test в соотношении 80/20
-    train_ids, test_ids = train_test_split(df_to_split['id'], test_size=0.2, random_state=42)
+    train_ids, test_ids = train_test_split(df_to_split['id'],
+                                           stratify=df_to_split['sentiment'],
+                                           test_size=0.2,
+                                           random_state=42)
 
     values_train = [(dataset_id, 0) for dataset_id in train_ids]  # 0 для обучающего набора
     values_test = [(dataset_id, 1) for dataset_id in test_ids]  # 1 для тестового набора
 
-    logging.warning(
-        f"Splitting completed. Total training ids: {len(train_ids)}. Total testing ids: {len(test_ids)}. Saving data...")
+    logging.warning(f"Splitting completed. Total training ids: {len(train_ids)}. "
+                    f"Total testing ids: {len(test_ids)}. Saving data...")
     save_splitted_dataset(connection, values_train, values_test)
     connection.close()
 

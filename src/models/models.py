@@ -23,7 +23,7 @@ def get_new_models():
         model = None
 
         if model_type == 'MLPClassifier':
-            layer_sizes = tuple(np.random.randint(50, 200, np.random.randint(3, 8)))
+            layer_sizes = tuple(np.random.randint(10, 400, np.random.randint(5, 12)))
             model_params['hidden_layer_sizes'] = ((100,)
                                                   + tuple(sorted(layer_sizes, reverse=True))
                                                   + (1,))

@@ -46,6 +46,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - name: fill database
+        if: steps.cache-source-data.outputs.cache-hit != 'true'
         env:
           DB_USERNAME: ${{secrets.DB_USER}}
           DB_PASSWORD: ${{secrets.DB_PASS}}

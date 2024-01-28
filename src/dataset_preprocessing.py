@@ -28,30 +28,29 @@ def preprocess_dataset(timeout_min):
     connection = connect_to_database()
 
     batch_size = 256
-    dataset_df = fetch_diff_between_datasets(connection, batch_size)
-
-    logging.warning(f"Fetched {len(dataset_df)} rows.")
-
-    if dataset_df.empty:
-        logging.warning(f"No such data for preprocessing.")
-        connection.close()
-        return
+    count, dataset_generator = fetch_diff_between_datasets(connection, batch_size)
+    logging.warning(f"Rows fetched. Processing in stream. "
+                    f"Total rows: {count}.")
 
     try:
         # Проход по батчам и предобработка
         start_time = time.time()
-        for i in range(0, len(dataset_df), batch_size):
-            batch = dataset_df.iloc[i:i + batch_size]
+        i = 0
+        for batch in dataset_generator:
             if batch.empty:
                 break
 
             sentiment_batch, embedding_batch = preprocess_batch(batch)
 
             # Сохраняем предобработанные данные
-            save_preprocessed_data(connection, embedding_batch, sentiment_batch, batch['version'])
+            save_preprocessed_data(connection, embedding_batch,
+                                   sentiment_batch, batch['version'])
 
             time_passed = time.time() - start_time
-            logging.warning(f'Processed rows: {i + batch_size} of {dataset_df.shape[0]}. Time spent: {time_passed}')
+            i += len(batch)
+
+            logging.warning(f'Processed rows: {i + batch_size}. '
+                            f'Time spent: {time_passed}')
             if time_passed > int(timeout_min) * 60:
                 logging.warning('Finish by timeout')
                 break

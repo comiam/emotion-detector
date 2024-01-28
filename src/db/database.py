@@ -116,6 +116,7 @@ def get_latest_dataset_version(connection):
 def fetch_diff_between_datasets(connection, batch_size):
     """
     Получает информацию, какие данные в dataset не были обработаны.
+    Возвращает общее количество строк для обработок, генератор df.
     """
     query = f'''
         SELECT d.*
@@ -124,7 +125,17 @@ def fetch_diff_between_datasets(connection, batch_size):
         WHERE p.version IS NULL
         ORDER BY d.id ASC;
     '''
-    return pd.read_sql_query(query, connection, chunksize=batch_size)
+    query_count = f'''
+        SELECT COUNT(d.*)
+        FROM dataset d
+        LEFT JOIN preprocessed_dataset p ON d.version = p.version
+        WHERE p.version IS NULL;
+    '''
+    with connection.cursor() as cursor:
+        cursor.execute(query_count)
+        count = cursor.fetchone()[0]
+
+    return count, pd.read_sql_query(query, connection, chunksize=batch_size)
 
 
 def save_new_data(df, connection):
@@ -180,7 +191,7 @@ def get_unsplitted_dataset(connection):
     Получаем данные из таблицы preprocessed_dataset, которые еще не включены в train_test_splits.
     """
     query = '''
-            SELECT p.id
+            SELECT p.id, p.sentiment
             FROM preprocessed_dataset p
             LEFT JOIN train_test_splits t ON p.id = t.dataset_id
             WHERE t.id IS NULL;

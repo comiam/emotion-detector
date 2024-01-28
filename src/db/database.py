@@ -199,16 +199,18 @@ def get_unsplitted_dataset(connection):
     return pd.read_sql_query(query, connection)
 
 
-def save_splitted_dataset(connection, values_train, values_test):
+def save_splitted_dataset(connection, splitted_dataset):
     """
     Сохраняем разделения в таблицу train_test_splits.
     """
     insert_query = '''
-            INSERT INTO train_test_splits (dataset_id, split_type)
-            VALUES (%s, %s);
-        '''
+        INSERT INTO train_test_splits (dataset_id, split_type)
+        VALUES %s;
+    '''
+
     with connection.cursor() as cursor:
-        cursor.executemany(insert_query, values_train + values_test)
+        extras.execute_values(cursor, insert_query, splitted_dataset)
+
     connection.commit()
 
 

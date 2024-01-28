@@ -4,12 +4,6 @@ jobs:
   pull:
     runs-on: ubuntu-latest
     steps:
-      - name: cache source data
-        id: cache-source-data
-        uses: actions/cache@v3
-        with:
-          path: assets/source-data
-          key: source-dataset
       - name: download dataset
         if: steps.cache-source-data.outputs.cache-hit != 'true'
         env:
@@ -23,19 +17,31 @@ jobs:
           mkdir -p assets/source-data/
           sudo apt-get install unzip
           unzip youtube-statistics.zip -d assets/source-data/
+      - name: artifact dataset
+        if: steps.cache-source-data.outputs.cache-hit != 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: artifact-dataset
+          path: assets/source-data/
   load:
     runs-on: ubuntu-latest
     needs: pull
     steps:
-      - name: checkout repository
-        uses: actions/checkout@v3
       - name: cache source data
-        if: steps.cache-source-data.outputs.cache-hit != 'true'
         id: cache-source-data
         uses: actions/cache@v3
         with:
           path: assets/source-data
           key: source-dataset
+      - name: checkout repository
+        if: steps.cache-source-data.outputs.cache-hit != 'true'
+        uses: actions/checkout@v3
+      - name: Download pulled dataset
+        if: steps.cache-source-data.outputs.cache-hit != 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: artifact-dataset
+          path: assets/source-data/
       - name: Cache pip packages
         if: steps.cache-source-data.outputs.cache-hit != 'true'
         uses: actions/cache@v3

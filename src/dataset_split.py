@@ -31,7 +31,7 @@ def create_splits():
 
     logging.warning(f"Splitting completed. Total training ids: {len(train_ids)}. "
                     f"Total testing ids: {len(test_ids)}. Saving data...")
-    save_splitted_dataset(connection, values_train, values_test)
+    save_splitted_dataset(connection, values_train + values_test)
     connection.close()
 
 
